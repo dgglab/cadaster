@@ -2,8 +2,51 @@ import math
 import os.path
 import sys
 import xml.etree.ElementTree
+import datetime
+import json
+import shutil
 
 from PySide6 import QtCore, QtGui, QtQml, QtQuick
+
+CV_DATA_ROOT = os.path.expanduser(os.path.join('~', 'leica_cv', 'data'))
+COPIED_IMAGES = os.path.join(CV_DATA_ROOT, "copied_images")
+ANNOTATIONS_DIR = os.path.join(CV_DATA_ROOT, "annotations")
+
+def add_incremented_suffix(path: str):
+    path_stem, extension = os.path.splitext(path)
+    i = 0
+    while i < 999:
+        path_candidate = f"{path_stem}_{i:03}{extension}"
+        if not os.path.exists(path_candidate):
+            return path_candidate
+        i+=1
+    raise RuntimeError("Exceeded 1k files with same base name")
+
+
+def save_annotation(img_path, x1, y1, x2, y2, flake_type, quality):
+    [os.makedirs(x, exist_ok=True) for x in [COPIED_IMAGES, ANNOTATIONS_DIR]]
+
+    name, img_ext = os.path.splitext(os.path.basename(img_path))
+
+    # Save copy of image
+    copied_img_path = add_incremented_suffix(os.path.join(COPIED_IMAGES, name + img_ext))
+    shutil.copyfile(img_path, copied_img_path)
+
+    # Save metadata
+    metadata_save_path = add_incremented_suffix(os.path.join(ANNOTATIONS_DIR, name + '.json'))
+    d = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "original_img_path": img_path,
+        "copied_img_path": copied_img_path,
+        "top_left": [x1, y1],
+        "bot_right": [x2, y2],
+        "flake_type": flake_type,
+        "flake_quality": quality
+    }
+    with open(metadata_save_path, 'w') as fout:
+        json.dump(d, fout)
+
+    print(f"Copied img and annotation data to {copied_img_path} and {metadata_save_path}")
 
 
 class Histogram(QtQuick.QQuickPaintedItem):
@@ -299,7 +342,6 @@ class Minimap(QtQuick.QQuickPaintedItem):
     @QtCore.Slot(float, float)
     def clicked(self, mx, my):
         if len(self._tiles) == 0: return
-        w, h = self.width(), self.height()
         nearest_d = float('inf')
         px, py = mx / self._scale, my / self._scale
         fx, fy = 0, 0
@@ -342,16 +384,13 @@ class Minimap(QtQuick.QQuickPaintedItem):
         self.positionYChanged.emit(self.positionY)
         self.update()
 
-    @QtCore.Slot(str, str, QtGui.QImage)
-    def capture(self, root, prefix, image):
+    @QtCore.Slot(str, str, QtGui.QImage, float, float, float, float, str, str)
+    def capture(self, root, prefix, image, x1, y1, x2, y2, label, quality):
+        save_annotation(self._tiles[self._sel]['path'], x1, y1, x2, y2, label, quality)
+
         root = QtCore.QUrl(root).toLocalFile()
-        i = 0
-        while i < 999:
-            name = os.path.join(root, f'{prefix}_{i:03}.png')
-            if not os.path.exists(name):
-                image.save(name)
-                break
-            i += 1
+        path = add_incremented_suffix(os.path.join(root, f'{prefix}_{label}{"_" + quality.replace(" ","") if quality else ""}.png'))
+        image.save(path)
 
 
 if __name__ == '__main__':

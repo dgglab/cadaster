@@ -76,48 +76,58 @@ ApplicationWindow {
             }
             scale: defaultScale()
             transformOrigin: Item.TopLeft
-        }
-
-        // Scale bar handles
-        Item { id: handle1 }
-        Item { id: handle2 }
-        MouseArea {
-            anchors.fill: parent 
-            acceptedButtons: Qt.RightButton
-            drag.target: handle2
-            drag.threshold: 0
-            onPressed: function(e) {
-                handle1.x = e.x;
-                handle1.y = e.y;
-                handle2.x = e.x;
-                handle2.y = e.y;
-                scalebox.visible = true;
+            // Scale bar handles
+            Item { id: handle1 }
+            Item { id: handle2 }
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                drag.target: handle2
+                drag.threshold: 0
+                onPressed: function(e) {
+                    handle1.x = e.x;
+                    handle1.y = e.y;
+                    handle2.x = e.x;
+                    handle2.y = e.y;
+                    scalebox.visible = true;
+                }
+                onClicked: scalebox.visible = false
             }
-            onClicked: scalebox.visible = false
-        }
-
-        Rectangle {
-            id: scalebox
-            x: Math.min(handle1.x, handle2.x)
-            y: Math.min(handle1.y, handle2.y)
-            width: Math.abs(handle1.x - handle2.x)
-            height: Math.abs(handle1.y - handle2.y)
-            border.color: "black"
-            color: "#00FFFFFF"
-            antialiasing: true
-            Text {
-                visible: parent.width > 3 && parent.height > 3
-                anchors.bottom: parent.top
-                anchors.left: parent.left
-                text: (parent.width / image.width * minimap.imageWidth / image.scale * 1000000).toFixed(1) + " \u03bcm"
-            }
-            Text {
-                visible: parent.width > 3 && parent.height > 3
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                text: (parent.height / image.height * minimap.imageHeight / image.scale * 1000000).toFixed(1) + " \u03bcm"
-                rotation: -90
-                transformOrigin: Item.BottomLeft
+            Rectangle {
+                id: scalebox
+                x: Math.min(handle1.x, handle2.x)
+                y: Math.min(handle1.y, handle2.y)
+                width: Math.abs(handle1.x - handle2.x)
+                height: Math.abs(handle1.y - handle2.y)
+                border.color: "black"
+                border.width: Math.max(1/image.scale, 1)
+                color: "#00FFFFFF"
+                antialiasing: true
+                Text {
+                    visible: parent.width > 3 && parent.height > 3
+                    anchors.bottom: parent.top
+                    anchors.left: parent.left
+                    // Note: totalWidth is measured in mm. Image.width and scalebox.width are both measured in pixels
+                    text: (10**3 * parent.width *  (minimap.totalWidth / image.width)).toFixed(1) + " \u03bcm"
+                    font.pointSize: Math.min(Math.max(15/image.scale, 15), 100)
+                }
+                Text {
+                    visible: parent.width > 3 && parent.height > 3
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    text: (10**3 * parent.height *  (minimap.totalHeight / image.height)).toFixed(1) + " \u03bcm"
+                    rotation: -90
+                    transformOrigin: Item.BottomLeft
+                    font.pointSize: Math.min(Math.max(15/image.scale, 15), 100)
+                }
+                Text {
+                    visible: parent.width > 3 && parent.height > 3
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.right
+                    text: (handle2.x/image.width).toFixed(2) + ", " + (handle2.y / image.height).toFixed(2)
+                    color: "cadetblue"
+                    font.pointSize: Math.min(Math.max(15/image.scale, 15), 100)
+                }
             }
         }
 
@@ -186,13 +196,20 @@ ApplicationWindow {
             }
             Button {
                 text: "Capture"
-                enabled: minimap.loaded
+                enabled: minimap.loaded & flakelabel.currentIndex > 0
                 onClicked: {
                     captarget.grabToImage(function(result) {
                         minimap.capture(
                             capturefolder.text,
                             captureprefix.text,
-                            result.image);
+                            result.image,
+                            handle1.x / image.width,
+                            handle1.y / image.height,
+                            handle2.x / image.width,
+                            handle2.y / image.height,
+                            flakelabel.model[flakelabel.currentIndex],
+                            flakequality.model[flakequality.currentIndex]
+                        );
                     });
                     captarget.focus = true;
                 }
@@ -215,6 +232,31 @@ ApplicationWindow {
             GridLayout {
                 columns: 2
                 anchors.fill: parent
+                Text { text: "Flake Type" }
+                ComboBox {
+                    id: flakelabel
+                    Layout.fillWidth: true
+                    model: [ "", "hBN", "Graphene"]
+                    // Note: we don't want to save to settings, lest a user absentmindely mislabel between chips
+                    onCurrentIndexChanged: {
+                        if (currentIndex == 1) {
+                            flakequality.model = ['', 'thin', 'thick']
+                        }
+                        else if (currentIndex == 2) {
+                            flakequality.model = ['', 'monolayer', 'bilayer', '3+ layers']
+                        } else {
+                            flakequality.model = []
+                        }
+                    }
+                }
+                Text { text: "(Optional) Flake Quality" }
+                ComboBox {
+                    id: flakequality
+                    enabled: flakelabel.currentIndex > 0
+                    Layout.fillWidth: true
+                    model: []
+                }
+
                 Text { text: "Save path" }
                 RowLayout {
                     TextField {
