@@ -8,9 +8,17 @@ import shutil
 
 from PySide6 import QtCore, QtGui, QtQml, QtQuick
 
-CV_DATA_ROOT = os.path.expanduser(os.path.join('~', 'leica_cv', 'data'))
+# If running this on the main leica machine, dropbox folder should exist at ~/Dropbox (DGG Lab), e.g.
+# "C:\Users\GGG-Leica-DM6M\Dropbox (DGG Lab)". Use this if it exists, otherwise just ~/leica_cv
+USER_DIR = os.path.expanduser("~")
+DROPBOX_ROOT = os.path.join(USER_DIR, "Dropbox (DGG Lab)")
+ROOT = DROPBOX_ROOT if os.path.exists(DROPBOX_ROOT) else USER_DIR
+
+CV_DATA_ROOT = os.path.join(ROOT, 'leica_cv', 'data')
 COPIED_IMAGES = os.path.join(CV_DATA_ROOT, "copied_images")
 ANNOTATIONS_DIR = os.path.join(CV_DATA_ROOT, "annotations")
+
+print("Saving data to", CV_DATA_ROOT)
 
 def add_incremented_suffix(path: str):
     path_stem, extension = os.path.splitext(path)
