@@ -31,7 +31,7 @@ def add_incremented_suffix(path: str):
     raise RuntimeError("Exceeded 1k files with same base name")
 
 
-def save_annotation(img_path, x1, y1, x2, y2, flake_type, quality):
+def save_annotation(img_path, x1, y1, x2, y2, substrate, flake_type, quality):
     [os.makedirs(x, exist_ok=True) for x in [COPIED_IMAGES, ANNOTATIONS_DIR]]
 
     name, img_ext = os.path.splitext(os.path.basename(img_path))
@@ -48,6 +48,7 @@ def save_annotation(img_path, x1, y1, x2, y2, flake_type, quality):
         "copied_img_path": copied_img_path,
         "top_left": [x1, y1],
         "bot_right": [x2, y2],
+        "substrate": substrate,
         "flake_type": flake_type,
         "flake_quality": quality
     }
@@ -392,12 +393,12 @@ class Minimap(QtQuick.QQuickPaintedItem):
         self.positionYChanged.emit(self.positionY)
         self.update()
 
-    @QtCore.Slot(str, str, QtGui.QImage, float, float, float, float, str, str)
-    def capture(self, root, prefix, image, x1, y1, x2, y2, label, quality):
-        save_annotation(self._tiles[self._sel]['path'], x1, y1, x2, y2, label, quality)
+    @QtCore.Slot(str, str, QtGui.QImage, float, float, float, float, str, str, str)
+    def capture(self, root, prefix, image, x1, y1, x2, y2, substrate, label, quality):
+        save_annotation(self._tiles[self._sel]['path'], x1, y1, x2, y2, substrate, label, quality)
 
         root = QtCore.QUrl(root).toLocalFile()
-        path = add_incremented_suffix(os.path.join(root, f'{prefix}_{label}{"_" + quality.replace(" ","") if quality else ""}.png'))
+        path = add_incremented_suffix(os.path.join(root, f'{prefix}_{substrate}_{label}{"_" + quality.replace(" ","") if quality else ""}.png'))
         image.save(path)
 
 

@@ -196,7 +196,7 @@ ApplicationWindow {
             }
             Button {
                 text: "Capture"
-                enabled: minimap.loaded & flakelabel.currentIndex > 0
+                enabled: minimap.loaded & flakelabel.currentIndex > 0 & substratelabel.currentIndex > 0
                 onClicked: {
                     captarget.grabToImage(function(result) {
                         minimap.capture(
@@ -207,6 +207,7 @@ ApplicationWindow {
                             handle1.y / image.height,
                             handle2.x / image.width,
                             handle2.y / image.height,
+                            substratelabel.model[substratelabel.currentIndex],
                             flakelabel.model[flakelabel.currentIndex],
                             flakequality.model[flakequality.currentIndex]
                         );
@@ -232,6 +233,12 @@ ApplicationWindow {
             GridLayout {
                 columns: 2
                 anchors.fill: parent
+                Text { text: "Substrate Type"}
+                ComboBox {
+                    id: substratelabel
+                    Layout.fillWidth: true
+                    model: ["", "90nm Oxide", "285nm Oxide", "300nm Oxide", "Sapphire [0001]"]
+                }
                 Text { text: "Flake Type" }
                 ComboBox {
                     id: flakelabel
