@@ -60,7 +60,7 @@ def save_annotation(img_path, x1, y1, x2, y2, substrate, flake_type, quality):
 
 class Histogram(QtQuick.QQuickPaintedItem):
 
-    source_changed = QtCore.Signal(str)
+    source_changed = QtCore.Signal(QtCore.QUrl)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -69,12 +69,13 @@ class Histogram(QtQuick.QQuickPaintedItem):
         self._greens = [0] * self._nbins
         self._blues = [0] * self._nbins
 
-    @QtCore.Property(str, notify=source_changed)
+    @QtCore.Property(QtCore.QUrl, notify=source_changed)
     def source(self):
         return self._source
 
     @source.setter
     def source(self, source):
+        source = source.toLocalFile()
         self._source = source
         self._reds = [0] * self._nbins
         self._greens = [0] * self._nbins
@@ -118,7 +119,7 @@ class Histogram(QtQuick.QQuickPaintedItem):
 class Minimap(QtQuick.QQuickPaintedItem):
 
     loadedChanged = QtCore.Signal(bool)
-    imagePathChanged = QtCore.Signal(str)
+    imagePathChanged = QtCore.Signal(QtCore.QUrl)
     totalWidthChanged = QtCore.Signal(float)
     totalHeightChanged = QtCore.Signal(float)
     imageWidthChanged = QtCore.Signal(float)
@@ -224,10 +225,10 @@ class Minimap(QtQuick.QQuickPaintedItem):
     def loaded(self):
         return self._loaded
 
-    @QtCore.Property(str, notify=imagePathChanged)
+    @QtCore.Property(QtCore.QUrl, notify=imagePathChanged)
     def imagePath(self):
         if len(self._tiles) == 0: return ''
-        return self._tiles[self._sel]['path']
+        return QtCore.QUrl.fromLocalFile(self._tiles[self._sel]['path'])
 
     @QtCore.Property(float, notify=totalWidthChanged)
     def totalWidth(self):
